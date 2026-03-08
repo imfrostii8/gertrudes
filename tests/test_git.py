@@ -65,16 +65,28 @@ def test_get_changed_files_empty_when_clean(git_repo):
 
 
 def test_commit_and_push_returns_false_when_clean(git_repo):
+    # Get the current/default branch name
+    branch_result = subprocess.run(
+        ["git", "branch", "--show-current"], cwd=git_repo, capture_output=True, text=True
+    )
+    default_branch = branch_result.stdout.strip()
+    
     # No remote, but commit_and_push should return False before push
-    result = commit_and_push(git_repo, "main", "nothing")
+    result = commit_and_push(git_repo, default_branch, "nothing")
     assert result is False
 
 
 def test_commit_and_push_commits_changes(git_repo):
+    # Get the current/default branch name
+    branch_result = subprocess.run(
+        ["git", "branch", "--show-current"], cwd=git_repo, capture_output=True, text=True
+    )
+    default_branch = branch_result.stdout.strip()
+    
     (git_repo / "new.py").write_text("content")
     # commit_and_push will fail at push (no remote), but we can test the commit part
     with pytest.raises(RuntimeError, match="push"):
-        commit_and_push(git_repo, "main", "add new file")
+        commit_and_push(git_repo, default_branch, "add new file")
     # Verify the commit was made before push failed
     result = subprocess.run(
         ["git", "log", "--oneline", "-1"], cwd=git_repo, capture_output=True, text=True
@@ -83,17 +95,23 @@ def test_commit_and_push_commits_changes(git_repo):
 
 
 def test_reset_and_cleanup(git_repo):
+    # Get the current/default branch name instead of hardcoding "main"
+    result = subprocess.run(
+        ["git", "branch", "--show-current"], cwd=git_repo, capture_output=True, text=True
+    )
+    default_branch = result.stdout.strip()
+    
     create_branch(git_repo, "feature/to-delete")
     (git_repo / "dirty.py").write_text("dirty")
     subprocess.run(["git", "add", "-A"], cwd=git_repo, capture_output=True)
 
-    reset_and_cleanup(git_repo, "main", "feature/to-delete")
+    reset_and_cleanup(git_repo, default_branch, "feature/to-delete")
 
-    # Should be back on main
+    # Should be back on the default branch
     result = subprocess.run(
         ["git", "branch", "--show-current"], cwd=git_repo, capture_output=True, text=True
     )
-    assert result.stdout.strip() == "main"
+    assert result.stdout.strip() == default_branch
 
     # Feature branch should be deleted
     result = subprocess.run(
