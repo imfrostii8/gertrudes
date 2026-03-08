@@ -47,10 +47,16 @@ def _implement_issue(config: Config, issue: github.Issue):
     """Clone, implement step by step, test, push, and open a PR."""
     # Parse the plan into steps
     plan = planner.parse_plan(issue.body)
-    print(f"Found {len(plan.steps)} step(s) and {len(plan.mentioned_files)} file(s) in the plan.")
+    print(
+        f"Found {len(plan.steps)} step(s) and {len(plan.mentioned_files)} file(s) in the plan."
+    )
 
     # Clone repo
-    workdir = Path(config.workdir) if config.workdir else Path(tempfile.mkdtemp(prefix="gertrudes-"))
+    workdir = (
+        Path(config.workdir)
+        if config.workdir
+        else Path(tempfile.mkdtemp(prefix="gertrudes-"))
+    )
     repo_path = workdir / config.repo.split("/")[-1]
     print(f"Cloning {config.repo} into {repo_path}...")
     git.clone_repo(config.repo, config.github_token, repo_path, config.base_branch)
@@ -76,8 +82,11 @@ def _implement_issue(config: Config, issue: github.Issue):
 
         try:
             raw_response = llm.implement_step(
-                config, step.title, step.body,
-                plan.raw_markdown, step_files,
+                config,
+                step.title,
+                step.body,
+                plan.raw_markdown,
+                step_files,
             )
             changes = file_changes.parse_llm_response(raw_response)
         except Exception as e:
@@ -98,15 +107,17 @@ def _implement_issue(config: Config, issue: github.Issue):
     if not git.has_changes(repo_path):
         if failed_step:
             github.comment_on_issue(
-                config, issue.number,
-                f"gertrudes: Failed at step \"{failed_step}\" with no prior changes.\n"
+                config,
+                issue.number,
+                f'gertrudes: Failed at step "{failed_step}" with no prior changes.\n'
                 f"```\n{failed_error}\n```",
             )
             github.remove_label(config, issue.number, config.implementing_tag)
             github.add_label(config, issue.number, config.manual_work_tag)
         else:
             github.comment_on_issue(
-                config, issue.number,
+                config,
+                issue.number,
                 "gertrudes: LLM returned no file changes. Manual implementation needed.",
             )
             github.remove_label(config, issue.number, config.implementing_tag)
@@ -116,8 +127,15 @@ def _implement_issue(config: Config, issue: github.Issue):
     # If a step failed but we have partial progress, create a draft PR
     if failed_step:
         _create_partial_pr(
-            config, repo_path, branch, issue,
-            all_written, completed_steps, failed_step, failed_error, remaining_steps,
+            config,
+            repo_path,
+            branch,
+            issue,
+            all_written,
+            completed_steps,
+            failed_step,
+            failed_error,
+            remaining_steps,
         )
         return
 
@@ -154,12 +172,17 @@ def _implement_issue(config: Config, issue: github.Issue):
                     f"```\n{error_output[:3000]}\n```"
                 )
                 pr = github.create_pull_request(
-                    config, branch, issue.number, issue.title,
-                    draft_body, draft=True,
+                    config,
+                    branch,
+                    issue.number,
+                    issue.title,
+                    draft_body,
+                    draft=True,
                 )
                 print(f"Draft PR created: {pr['html_url']}")
                 github.comment_on_issue(
-                    config, issue.number,
+                    config,
+                    issue.number,
                     f"gertrudes: Tests failing after {config.max_fix_retries} fix attempts. "
                     f"Opened a draft PR for manual work: {pr['html_url']}",
                 )
@@ -173,7 +196,8 @@ def _implement_issue(config: Config, issue: github.Issue):
 
     if not committed:
         github.comment_on_issue(
-            config, issue.number,
+            config,
+            issue.number,
             "gertrudes: No committable changes produced.",
         )
         return
@@ -185,7 +209,8 @@ def _implement_issue(config: Config, issue: github.Issue):
 
     # Comment on issue + swap tag to done
     github.comment_on_issue(
-        config, issue.number,
+        config,
+        issue.number,
         f"gertrudes: Implementation complete!\n\nPR: {pr['html_url']}",
     )
     github.remove_label(config, issue.number, config.implementing_tag)
@@ -215,8 +240,9 @@ def _create_partial_pr(
 
     if not committed:
         github.comment_on_issue(
-            config, issue.number,
-            f"gertrudes: Failed at step \"{failed_step}\" with no committable changes.\n"
+            config,
+            issue.number,
+            f'gertrudes: Failed at step "{failed_step}" with no committable changes.\n'
             f"```\n{failed_error}\n```",
         )
         github.remove_label(config, issue.number, config.implementing_tag)
@@ -242,15 +268,20 @@ def _create_partial_pr(
     )
 
     pr = github.create_pull_request(
-        config, branch, issue.number, issue.title,
-        draft_body, draft=True,
+        config,
+        branch,
+        issue.number,
+        issue.title,
+        draft_body,
+        draft=True,
     )
     print(f"Draft PR created (partial): {pr['html_url']}")
 
     github.comment_on_issue(
-        config, issue.number,
+        config,
+        issue.number,
         f"gertrudes: Completed {len(completed_steps)}/{len(completed_steps) + len(remaining_steps)} steps. "
-        f"Failed at \"{failed_step}\". "
+        f'Failed at "{failed_step}". '
         f"Draft PR with partial progress: {pr['html_url']}",
     )
     github.remove_label(config, issue.number, config.implementing_tag)
@@ -264,7 +295,9 @@ def _collect_file_contents(repo_path: Path, file_paths: list[str]) -> dict[str, 
         full_path = repo_path / file_path
         if full_path.exists():
             try:
-                contents[file_path] = full_path.read_text(encoding="utf-8", errors="ignore")
+                contents[file_path] = full_path.read_text(
+                    encoding="utf-8", errors="ignore"
+                )
             except Exception:
                 pass
     return contents
