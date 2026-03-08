@@ -6,6 +6,8 @@ build-backend = "setuptools.build_meta"
 name = "gertrudes"
 version = "0.1.1"
 description = "Picks up GitHub issues with a configurable tag and implements them using a configurable LLM"
+license = { text = "MIT" }
+authors = [{ name = "Imfrostii", email = "imfrostii@pm.me" }]
 requires-python = ">=3.10"
 dependencies = [
     "requests>=2.28",
@@ -24,6 +26,7 @@ dev = [
 ]
 
 [project.urls]
+Homepage = "https://github.com/imfrostii8/gertrudes"
 Repository = "https://github.com/imfrostii8/gertrudes"
 
 [project.scripts]
