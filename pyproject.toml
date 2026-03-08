@@ -20,6 +20,9 @@ dev = [
     "responses",
 ]
 
+[project.urls]
+Repository = "https://github.com/imfrostii8/gertrudes"
+
 [project.scripts]
 gertrudes = "gertrudes.cli:main"
 
