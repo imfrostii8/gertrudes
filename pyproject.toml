@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gertrudes"
+version = "0.1.0"
+description = "Picks up GitHub issues with a configurable tag and implements them using a configurable LLM"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28",
+    "litellm>=1.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-mock",
+    "responses",
+]
+
+[project.scripts]
+gertrudes = "gertrudes.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

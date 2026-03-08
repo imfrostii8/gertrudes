@@ -1,0 +1,17 @@
+# Required
+repo: "owner/repo"
+
+# LLM — any litellm-compatible model string
+llm_model: "anthropic/claude-sonnet-4-20250514"
+
+# Tags/Labels
+issue_tag: "ready-to-implement"
+implementing_tag: "implementing"
+done_tag: "implemented"
+pr_label: "automated-pr"
+
+# Optional
+base_branch: "main"
+test_command: null        # e.g. "pytest", "npm test"
+max_fix_retries: 2
+workdir: null             # null = use a temp directory

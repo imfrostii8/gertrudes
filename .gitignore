@@ -1,0 +1,9 @@
+.venv/
+*.egg-info/
+__pycache__/
+*.pyc
+dist/
+build/
+.env
+gertrudes.yaml
+.claude/
