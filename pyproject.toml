@@ -18,6 +18,9 @@ dev = [
     "pytest>=7.0",
     "pytest-mock",
     "responses",
+    "flake8>=6.0",
+    "black>=23.0",
+    "isort>=5.0",
 ]
 
 [project.scripts]
@@ -25,3 +28,33 @@ gertrudes = "gertrudes.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.black]
+line-length = 88
+target-version = ['py310']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.mypy_cache
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+known_first_party = ["gertrudes"]
+
+[tool.flake8]
+max-line-length = 88
+max-complexity = 10
+extend-ignore = [
+    "E203",  # whitespace before ':'
+    "W503",  # line break before binary operator
+]
