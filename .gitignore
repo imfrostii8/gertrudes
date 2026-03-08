@@ -6,4 +6,5 @@ dist/
 build/
 .env
 gertrudes.yaml
+gertrudes.yml
 .claude/

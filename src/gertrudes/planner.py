@@ -36,8 +36,19 @@ _FILE_PATH_RE = re.compile(
 
 # Common non-code extensions to ignore
 _IGNORE_EXTENSIONS = {
-    ".md", ".txt", ".png", ".jpg", ".jpeg", ".gif", ".svg",
-    ".ico", ".pdf", ".zip", ".tar", ".gz", ".lock",
+    ".md",
+    ".txt",
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".svg",
+    ".ico",
+    ".pdf",
+    ".zip",
+    ".tar",
+    ".gz",
+    ".lock",
 }
 
 # Matches markdown headers (## or ###)

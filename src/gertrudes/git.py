@@ -35,7 +35,9 @@ def create_branch(repo_path: Path, branch_name: str) -> str:
 
 def has_changes(repo_path: Path) -> bool:
     result = _run(["diff", "--stat"], cwd=repo_path, check=False)
-    untracked = _run(["ls-files", "--others", "--exclude-standard"], cwd=repo_path, check=False)
+    untracked = _run(
+        ["ls-files", "--others", "--exclude-standard"], cwd=repo_path, check=False
+    )
     return bool(result.stdout.strip() or untracked.stdout.strip())
 
 
@@ -43,7 +45,9 @@ def get_changed_files(repo_path: Path) -> list[str]:
     """Return list of files changed relative to HEAD."""
     result = _run(["diff", "--name-only", "HEAD"], cwd=repo_path, check=False)
     staged = _run(["diff", "--name-only", "--cached"], cwd=repo_path, check=False)
-    untracked = _run(["ls-files", "--others", "--exclude-standard"], cwd=repo_path, check=False)
+    untracked = _run(
+        ["ls-files", "--others", "--exclude-standard"], cwd=repo_path, check=False
+    )
     files = set()
     for output in [result.stdout, staged.stdout, untracked.stdout]:
         files.update(l.strip() for l in output.splitlines() if l.strip())
