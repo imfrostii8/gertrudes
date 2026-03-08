@@ -7,8 +7,8 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from gertrudes import file_changes, git, github, llm, planner
 from gertrudes.config import Config
-from gertrudes import github, git, planner, llm, file_changes
 
 
 def run(config: Config):
