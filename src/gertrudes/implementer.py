@@ -143,7 +143,11 @@ def _implement_issue(config: Config, issue: github.Issue):
                 break
             print(f"Fix attempt {attempt + 1}/{config.max_fix_retries}...")
             changed_files = git.get_changed_files(repo_path)
-            current_content = _collect_file_contents(repo_path, changed_files)
+            current_content = {
+                f: (repo_path / f).read_text(encoding="utf-8", errors="ignore")
+                for f in changed_files
+                if (repo_path / f).exists()
+            }
 
             fix_response = llm.fix_errors(config, error_output, current_content)
             fix_changes = file_changes.parse_llm_response(fix_response)
