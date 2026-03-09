@@ -76,17 +76,13 @@ def _implement_issue(config: Config, issue: github.Issue):
     for i, step in enumerate(plan.steps):
         print(f"\n--- Step {i + 1}/{len(plan.steps)}: {step.title} ---")
 
-        # Read current contents of files mentioned in this step
-        # (re-read each time since previous steps may have changed them)
-        step_files = _collect_file_contents(repo_path, step.mentioned_files)
-
         try:
             raw_response = llm.implement_step(
                 config,
                 step.title,
                 step.body,
                 plan.raw_markdown,
-                step_files,
+                repo_path,
             )
             changes = file_changes.parse_llm_response(raw_response)
         except Exception as e:
@@ -287,20 +283,6 @@ def _create_partial_pr(
     github.remove_label(config, issue.number, config.implementing_tag)
     github.add_label(config, issue.number, config.manual_work_tag)
 
-
-def _collect_file_contents(repo_path: Path, file_paths: list[str]) -> dict[str, str]:
-    """Read file contents from the repo, skipping files that don't exist."""
-    contents: dict[str, str] = {}
-    for file_path in file_paths:
-        full_path = repo_path / file_path
-        if full_path.exists():
-            try:
-                contents[file_path] = full_path.read_text(
-                    encoding="utf-8", errors="ignore"
-                )
-            except Exception:
-                pass
-    return contents
 
 
 def _run_tests(test_command: str, repo_path: Path) -> tuple[bool, str]:
