@@ -8,3 +8,4 @@ build/
 gertrudes.yaml
 gertrudes.yml
 .claude/
+.pytest_cache/

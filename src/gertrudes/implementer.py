@@ -288,7 +288,6 @@ def _create_partial_pr(
     github.add_label(config, issue.number, config.manual_work_tag)
 
 
-
 def _run_tests(test_command: str, repo_path: Path) -> tuple[bool, str]:
     """Run the test command, return (passed, error_output)."""
     print(f"Running tests: {test_command}")

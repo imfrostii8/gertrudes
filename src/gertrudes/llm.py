@@ -120,15 +120,23 @@ If this step requires no file changes, return an empty JSON object: {{}}"""
         # Append assistant message and execute each tool call
         messages.append(msg)
         for tool_call in msg.tool_calls:
-            result = _run_tool(repo_path, tool_call.function.name, tool_call.function.arguments)
-            print(f"  [tool] {tool_call.function.name}({tool_call.function.arguments[:80]}) -> {len(result)} chars")
-            messages.append({
-                "role": "tool",
-                "tool_call_id": tool_call.id,
-                "content": result,
-            })
+            result = _run_tool(
+                repo_path, tool_call.function.name, tool_call.function.arguments
+            )
+            print(
+                f"  [tool] {tool_call.function.name}({tool_call.function.arguments[:80]}) -> {len(result)} chars"
+            )
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": tool_call.id,
+                    "content": result,
+                }
+            )
 
-    raise RuntimeError(f"Exceeded {_MAX_TOOL_ROUNDS} tool rounds without a final answer.")
+    raise RuntimeError(
+        f"Exceeded {_MAX_TOOL_ROUNDS} tool rounds without a final answer."
+    )
 
 
 def fix_errors(
