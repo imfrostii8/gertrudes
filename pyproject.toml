@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "gertrudes"
-version = "0.1.2"
+version = "0.1.3"
 description = "Picks up GitHub issues with a configurable tag and implements them using a configurable LLM"
 license = { text = "MIT" }
 authors = [{ name = "Imfrostii", email = "imfrostii@pm.me" }]
