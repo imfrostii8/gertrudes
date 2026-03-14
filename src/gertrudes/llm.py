@@ -88,7 +88,7 @@ def _run_configured_command(repo_path: Path, command: str, workdir: str) -> str:
         text=True,
         timeout=300,
     )
-    output = (result.stdout + result.stderr)[-3000:]
+    output = (result.stdout + result.stderr)[-8000:]
     status = "PASSED" if result.returncode == 0 else "FAILED"
     return f"[{status}]\n{output}"
 
@@ -124,6 +124,8 @@ def implement_step(
     step_body: str,
     full_plan: str,
     repo_path: Path,
+    mentioned_files: list[str] | None = None,
+    previous_changes: dict[str, str] | None = None,
 ) -> str:
     """Implement a single step using an agentic tool-calling loop."""
     build_command = config.build_command
@@ -140,7 +142,29 @@ def implement_step(
         tools.append(_TEST_TOOL)
         check_instructions += "6. Run `run_tests` after the build passes and fix any failures before finalizing.\n"
 
-    prompt = f"""You are a software engineer implementing ONE step of a larger plan.
+    # Pre-read files mentioned in this step so the LLM doesn't waste tool rounds discovering them
+    preread_section = ""
+    if mentioned_files:
+        preread_lines = []
+        for path in mentioned_files:
+            content = _read_file(repo_path, path)
+            if not content.startswith("File not found") and not content.startswith("Error reading"):
+                preread_lines.append(f"=== {path} ===\n{content}")
+                print(f"  [preread] {path} ({len(content)} chars)")
+        if preread_lines:
+            preread_section = "\n\n## Files Referenced in This Step\n\n" + "\n\n".join(preread_lines)
+
+    # Include current state of files modified in previous steps to avoid conflicts
+    prev_changes_section = ""
+    if previous_changes:
+        prev_lines = [f"=== {path} ===\n{content}" for path, content in previous_changes.items()]
+        prev_changes_section = (
+            "\n\n## Files Already Modified in Previous Steps\n\n"
+            + "\n\n".join(prev_lines)
+            + "\n\nBe aware of these changes when implementing the current step to avoid conflicts."
+        )
+
+    prompt = f"""You are implementing ONE step of a larger plan.
 
 ## Full Plan (for context)
 
@@ -148,12 +172,12 @@ def implement_step(
 
 ## Current Step: {step_title}
 
-{step_body}
+{step_body}{preread_section}{prev_changes_section}
 
 ## Instructions
 
-1. Use `list_files` to explore the repository structure.
-2. Use `read_file` to read any files you need to understand before making changes.
+1. Use `list_files` to explore the repository structure if needed.
+2. Use `read_file` to read any additional files you need before making changes.
 3. Once you have enough context, implement ONLY the changes for the current step.
 4. Follow the existing code style and conventions.
 {check_instructions}
@@ -165,7 +189,11 @@ No markdown fences, no explanation, no preamble. Example:
 
 If this step requires no file changes, return an empty JSON object: {{}}"""
 
-    messages = [{"role": "user", "content": prompt}]
+    system_content = config.system_prompt or "You are a software engineer implementing GitHub issues."
+    messages = [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": prompt},
+    ]
 
     for _ in range(_MAX_TOOL_ROUNDS):
         response = litellm.completion(
@@ -217,6 +245,7 @@ def fix_errors(
     for path, content in files_content.items():
         files_text += f"\n\n=== {path} ===\n{content}"
 
+    system_content = config.system_prompt or "You are a software engineer implementing GitHub issues."
     prompt = f"""The following files were just modified but the build/tests are failing.
 
 ## Error Output
@@ -234,7 +263,10 @@ No markdown fences, no explanation, no preamble."""
 
     response = litellm.completion(
         model=config.llm_model,
-        messages=[{"role": "user", "content": prompt}],
+        messages=[
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": prompt},
+        ],
         temperature=0.1,
     )
     return response.choices[0].message.content.strip()

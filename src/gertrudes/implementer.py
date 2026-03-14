@@ -72,6 +72,8 @@ def _implement_issue(config: Config, issue: github.Issue):
     failed_step: str | None = None
     failed_error: str | None = None
     remaining_steps: list[planner.Step] = []
+    # Accumulates the current content of every file changed so far, passed to each new step
+    previous_changes: dict[str, str] = {}
 
     for i, step in enumerate(plan.steps):
         print(f"\n--- Step {i + 1}/{len(plan.steps)}: {step.title} ---")
@@ -83,6 +85,8 @@ def _implement_issue(config: Config, issue: github.Issue):
                 step.body,
                 plan.raw_markdown,
                 repo_path,
+                mentioned_files=step.mentioned_files,
+                previous_changes=previous_changes if previous_changes else None,
             )
             changes = file_changes.parse_llm_response(raw_response)
         except Exception as e:
@@ -95,6 +99,11 @@ def _implement_issue(config: Config, issue: github.Issue):
         if changes:
             written = file_changes.apply_changes(repo_path, changes)
             all_written.extend(written)
+            # Update previous_changes with the latest content of every touched file
+            for path in written:
+                full = repo_path / path
+                if full.exists():
+                    previous_changes[path] = full.read_text(encoding="utf-8", errors="ignore")
             print(f"  Applied: {', '.join(written)}")
 
         completed_steps.append(step.title)
@@ -302,6 +311,6 @@ def _run_tests(test_command: str, repo_path: Path) -> tuple[bool, str]:
     if result.returncode == 0:
         print("Tests passed.")
         return True, ""
-    error_output = result.stdout[-3000:] + "\n" + result.stderr[-1000:]
+    error_output = result.stdout[-6000:] + "\n" + result.stderr[-2000:]
     print("Tests failed.")
     return False, error_output
