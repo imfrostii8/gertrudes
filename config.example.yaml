@@ -15,3 +15,4 @@ base_branch: "main"
 test_command: null        # e.g. "pytest", "npm test"
 max_fix_retries: 2
 workdir: null             # null = use a temp directory
+system_prompt: null       # e.g. "You are an expert Python developer. Always use type hints."

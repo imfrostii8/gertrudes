@@ -56,3 +56,24 @@ def test_missing_github_token_raises(tmp_path, monkeypatch):
 def test_missing_config_file_raises():
     with pytest.raises(FileNotFoundError, match="Config file not found"):
         load_config("/nonexistent/path.yaml")
+
+
+def test_system_prompt_loaded_from_yaml(tmp_path, monkeypatch):
+    config_file = tmp_path / "gertrudes.yaml"
+    config_file.write_text(
+        'repo: "owner/repo"\n'
+        'system_prompt: "You are an expert Python developer."\n'
+    )
+    monkeypatch.setenv("GITHUB_TOKEN", "fake-token")
+
+    config = load_config(str(config_file))
+    assert config.system_prompt == "You are an expert Python developer."
+
+
+def test_system_prompt_defaults_to_none(tmp_path, monkeypatch):
+    config_file = tmp_path / "gertrudes.yaml"
+    config_file.write_text('repo: "owner/repo"\n')
+    monkeypatch.setenv("GITHUB_TOKEN", "fake-token")
+
+    config = load_config(str(config_file))
+    assert config.system_prompt is None

@@ -6,6 +6,8 @@ import json
 import re
 from pathlib import Path
 
+from gertrudes.sandbox import safe_resolve
+
 
 def parse_llm_response(raw: str) -> dict[str, str]:
     """Parse an LLM response into a {filepath: content} dict.
@@ -42,7 +44,7 @@ def apply_changes(repo_path: Path, changes: dict[str, str]) -> list[str]:
     """Write file changes to disk. Returns list of written paths."""
     written = []
     for rel_path, content in changes.items():
-        file_path = repo_path / rel_path
+        file_path = safe_resolve(repo_path, rel_path)
         file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path.write_text(content, encoding="utf-8")
         written.append(rel_path)
