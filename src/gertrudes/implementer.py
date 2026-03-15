@@ -69,6 +69,7 @@ def _implement_issue(config: Config, issue: github.Issue):
     # Implement step by step
     all_written: list[str] = []
     completed_steps: list[str] = []
+    step_summaries: list[str] = []
     failed_step: str | None = None
     failed_error: str | None = None
     remaining_steps: list[planner.Step] = []
@@ -76,15 +77,18 @@ def _implement_issue(config: Config, issue: github.Issue):
     for i, step in enumerate(plan.steps):
         print(f"\n--- Step {i + 1}/{len(plan.steps)}: {step.title} ---")
 
+        previous_summary = "\n".join(step_summaries) if step_summaries else None
+
         try:
-            raw_response = llm.implement_step(
+            result = llm.implement_step(
                 config,
                 step.title,
                 step.body,
                 plan.raw_markdown,
                 repo_path,
+                mentioned_files=plan.mentioned_files,
+                previous_steps_summary=previous_summary,
             )
-            changes = file_changes.parse_llm_response(raw_response)
         except Exception as e:
             print(f"  Step failed: {e}")
             failed_step = step.title
@@ -92,11 +96,22 @@ def _implement_issue(config: Config, issue: github.Issue):
             remaining_steps = list(plan.steps[i:])
             break
 
-        if changes:
-            written = file_changes.apply_changes(repo_path, changes)
+        # Files written via tools take priority; fall back to JSON response
+        written = list(result.written_files)
+        if not written and result.raw_response:
+            try:
+                changes = file_changes.parse_llm_response(result.raw_response)
+                written = file_changes.apply_changes(repo_path, changes)
+            except ValueError:
+                written = []
+
+        if written:
             all_written.extend(written)
             print(f"  Applied: {', '.join(written)}")
 
+        step_summaries.append(
+            f"Step '{step.title}': {', '.join(written) if written else 'no file changes'}"
+        )
         completed_steps.append(step.title)
 
     # Check if we have any changes at all
@@ -149,9 +164,14 @@ def _implement_issue(config: Config, issue: github.Issue):
                 if (repo_path / f).exists()
             }
 
-            fix_response = llm.fix_errors(config, error_output, current_content)
-            fix_changes = file_changes.parse_llm_response(fix_response)
-            file_changes.apply_changes(repo_path, fix_changes)
+            fix_result = llm.fix_errors(config, error_output, current_content, repo_path)
+            fix_written = list(fix_result.written_files)
+            if not fix_written and fix_result.raw_response:
+                try:
+                    fix_changes = file_changes.parse_llm_response(fix_result.raw_response)
+                    fix_written = file_changes.apply_changes(repo_path, fix_changes)
+                except ValueError:
+                    fix_written = []
             tests_passed, error_output = _run_tests(config.test_command, repo_path)
 
         if not tests_passed:

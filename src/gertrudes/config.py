@@ -22,6 +22,7 @@ class Config:
     test_command: str | None = None
     max_fix_retries: int = 2
     workdir: Path | None = None
+    system_prompt: str | None = None
 
 
 def load_config(config_path: str | None = None) -> Config:
@@ -57,6 +58,7 @@ def load_config(config_path: str | None = None) -> Config:
         test_command=data.get("test_command"),
         max_fix_retries=data.get("max_fix_retries", Config.max_fix_retries),
         workdir=Path(workdir) if workdir else None,
+        system_prompt=data.get("system_prompt"),
     )
 
     # Load .env file if present

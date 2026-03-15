@@ -7,6 +7,15 @@ import pytest
 from gertrudes.config import Config
 from gertrudes.github import Issue
 from gertrudes.implementer import run, _implement_issue
+from gertrudes.llm import StepResult
+
+
+def _step_result(files: dict[str, str] | None = None) -> StepResult:
+    """Helper: build a StepResult with JSON fallback payload."""
+    return StepResult(
+        written_files=[],
+        raw_response=json.dumps(files or {}),
+    )
 
 
 @pytest.fixture
@@ -61,7 +70,7 @@ def test_no_changes_tags_manual_work(mock_github, mock_git, mock_llm, config, si
     mock_git.clone_repo.return_value = config.workdir / "repo"
     mock_git.create_branch.return_value = "gertrudes/issue-42"
     mock_git.has_changes.return_value = False
-    mock_llm.implement_step.return_value = json.dumps({})
+    mock_llm.implement_step.return_value = _step_result({})
 
     (config.workdir / "repo").mkdir(parents=True, exist_ok=True)
 
@@ -87,8 +96,11 @@ def test_tests_fail_creates_draft_pr(mock_github, mock_git, mock_llm, mock_tests
     mock_git.commit_and_push.return_value = True
     mock_git.get_changed_files.return_value = ["src/app.py"]
 
-    mock_llm.implement_step.return_value = json.dumps({"src/app.py": "print('hi')"})
-    mock_llm.fix_errors.return_value = json.dumps({"src/app.py": "print('fixed')"})
+    mock_llm.implement_step.return_value = _step_result({"src/app.py": "print('hi')"})
+    mock_llm.fix_errors.return_value = StepResult(
+        written_files=[],
+        raw_response=json.dumps({"src/app.py": "print('fixed')"}),
+    )
     mock_tests.return_value = (False, "AssertionError: expected 1 got 2")
 
     _implement_issue(config, single_step_issue)
@@ -115,7 +127,7 @@ def test_success_creates_pr_and_tags_done(mock_github, mock_git, mock_llm, mock_
     mock_git.has_changes.return_value = True
     mock_git.commit_and_push.return_value = True
 
-    mock_llm.implement_step.return_value = json.dumps({"src/app.py": "print('hi')"})
+    mock_llm.implement_step.return_value = _step_result({"src/app.py": "print('hi')"})
     mock_tests.return_value = (True, "")
     mock_github.create_pull_request.return_value = {"html_url": "https://github.com/pr/1"}
 
@@ -160,7 +172,7 @@ def test_step_failure_creates_partial_draft_pr(mock_github, mock_git, mock_llm, 
 
     # Step 1 succeeds, step 2 fails
     mock_llm.implement_step.side_effect = [
-        json.dumps({"src/app.py": "print('step1')"}),
+        _step_result({"src/app.py": "print('step1')"}),
         Exception("LLM error on step 2"),
     ]
     mock_github.create_pull_request.return_value = {"html_url": "https://github.com/pr/1"}
@@ -198,8 +210,8 @@ def test_all_steps_succeed(mock_github, mock_git, mock_llm, config, issue):
     mock_git.commit_and_push.return_value = True
 
     mock_llm.implement_step.side_effect = [
-        json.dumps({"src/app.py": "step1 content"}),
-        json.dumps({"src/config.py": "step2 content"}),
+        _step_result({"src/app.py": "step1 content"}),
+        _step_result({"src/config.py": "step2 content"}),
     ]
     mock_github.create_pull_request.return_value = {"html_url": "https://github.com/pr/1"}
 
@@ -227,7 +239,7 @@ def test_git_push_failure_propagates(mock_github, mock_git, mock_llm, config, si
     mock_git.has_changes.return_value = True
     mock_git.commit_and_push.side_effect = RuntimeError("git push failed: permission denied")
 
-    mock_llm.implement_step.return_value = json.dumps({"src/app.py": "print('hi')"})
+    mock_llm.implement_step.return_value = _step_result({"src/app.py": "print('hi')"})
 
     with pytest.raises(RuntimeError, match="git push failed"):
         _implement_issue(config, single_step_issue)
@@ -256,7 +268,7 @@ def test_no_test_command_skips_tests(mock_github, mock_git, mock_llm, config, si
     mock_git.has_changes.return_value = True
     mock_git.commit_and_push.return_value = True
 
-    mock_llm.implement_step.return_value = json.dumps({"src/app.py": "print('hi')"})
+    mock_llm.implement_step.return_value = _step_result({"src/app.py": "print('hi')"})
     mock_github.create_pull_request.return_value = {"html_url": "https://github.com/pr/1"}
 
     with patch("gertrudes.implementer._run_tests") as mock_tests:
@@ -281,7 +293,7 @@ def test_commit_returns_false_nothing_to_commit(mock_github, mock_git, mock_llm,
     mock_git.has_changes.return_value = True
     mock_git.commit_and_push.return_value = False
 
-    mock_llm.implement_step.return_value = json.dumps({"src/app.py": "content"})
+    mock_llm.implement_step.return_value = _step_result({"src/app.py": "content"})
 
     _implement_issue(config, single_step_issue)
 
@@ -298,3 +310,33 @@ def test_run_error_comments_on_issue(mock_github, config, issue):
             run(config)
     mock_github.comment_on_issue.assert_called_once()
     assert "something broke" in mock_github.comment_on_issue.call_args[0][2]
+
+
+@patch("gertrudes.implementer.llm")
+@patch("gertrudes.implementer.git")
+@patch("gertrudes.implementer.github")
+def test_implement_step_called_with_context(mock_github, mock_git, mock_llm, config, issue):
+    """implement_step is called with mentioned_files and previous_steps_summary."""
+    repo_path = config.workdir / "repo"
+    repo_path.mkdir(parents=True, exist_ok=True)
+
+    mock_git.clone_repo.return_value = repo_path
+    mock_git.create_branch.return_value = "gertrudes/issue-42"
+    mock_git.has_changes.return_value = True
+    mock_git.commit_and_push.return_value = True
+
+    mock_llm.implement_step.side_effect = [
+        _step_result({"src/app.py": "step1"}),
+        _step_result({"src/config.py": "step2"}),
+    ]
+    mock_github.create_pull_request.return_value = {"html_url": "https://github.com/pr/1"}
+
+    _implement_issue(config, issue)
+
+    calls = mock_llm.implement_step.call_args_list
+    # First call: no previous_steps_summary
+    assert calls[0].kwargs.get("previous_steps_summary") is None
+    # Second call: previous_steps_summary mentions step 1
+    prev = calls[1].kwargs.get("previous_steps_summary")
+    assert prev is not None
+    assert "Step 1" in prev
