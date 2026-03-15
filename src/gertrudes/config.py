@@ -19,9 +19,13 @@ class Config:
     manual_work_tag: str = "manual-work"
     pr_label: str = "automated-pr"
     base_branch: str = "main"
+    build_command: str | None = None
+    build_workdir: str = "."
     test_command: str | None = None
+    test_workdir: str = "."
     max_fix_retries: int = 2
     workdir: Path | None = None
+    system_prompt: str | None = None
 
 
 def load_config(config_path: str | None = None) -> Config:
@@ -54,9 +58,13 @@ def load_config(config_path: str | None = None) -> Config:
         manual_work_tag=data.get("manual_work_tag", Config.manual_work_tag),
         pr_label=data.get("pr_label", Config.pr_label),
         base_branch=data.get("base_branch", Config.base_branch),
+        build_command=data.get("build_command"),
+        build_workdir=data.get("build_workdir", "."),
         test_command=data.get("test_command"),
+        test_workdir=data.get("test_workdir", "."),
         max_fix_retries=data.get("max_fix_retries", Config.max_fix_retries),
         workdir=Path(workdir) if workdir else None,
+        system_prompt=data.get("system_prompt"),
     )
 
     # Load .env file if present

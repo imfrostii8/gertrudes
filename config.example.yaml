@@ -10,8 +10,22 @@ implementing_tag: "implementing"
 done_tag: "implemented"
 pr_label: "automated-pr"
 
+# System prompt — describe the project so the LLM has context about the language,
+# framework, conventions, and anything else it should know before touching code.
+# This is injected as the system message on every LLM call.
+# system_prompt: |
+#   This is a Python 3.12 FastAPI service backed by PostgreSQL.
+#   Dependencies are managed with Poetry. Code style: ruff + black (line length 100).
+#   Tests use pytest with pytest-asyncio. Never use sync I/O inside async routes.
+#   The main app is in src/app/, models in src/app/models/, routes in src/app/routes/.
+
+# Build and test commands (optional)
+# build_command: "poetry run ruff check . && poetry run mypy src"
+# build_workdir: "."
+# test_command: "poetry run pytest"
+# test_workdir: "."
+
 # Optional
 base_branch: "main"
-test_command: null        # e.g. "pytest", "npm test"
 max_fix_retries: 2
 workdir: null             # null = use a temp directory
